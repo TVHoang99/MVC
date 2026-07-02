@@ -1,0 +1,31 @@
+# Dependencies
+vendor/
+composer.lock
+
+# Codebase memory index
+.codebase-memory/
+
+# Markdown files
+*.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# Cache
+.cache/
+node_modules/
