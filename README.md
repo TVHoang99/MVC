@@ -1,6 +1,6 @@
-# MVC Framework - Mô Hình Lớp Trừu Tượng (UML)
+# MVC Framework - Abstract Class Model (UML)
 
-## Sơ Đồ Lớp
+## Class Diagram
 
 ```mermaid
 classDiagram
@@ -110,9 +110,9 @@ classDiagram
 
 ---
 
-## Đặc Tả Lớp Trừu Tượng
+## Abstract Class Specifications
 
-### 1. Model (Lớp Cơ Sở Trừu Tượng)
+### 1. Model (Abstract Base)
 
 ```
 ┌─────────────────────────────────────────┐
@@ -122,7 +122,7 @@ classDiagram
 │  +getProperties(): array                │
 └─────────────────────────────────────────┘
         △
-        │ kế thừa
+        │ extends
 ┌───────┴─────────────────────────────────┐
 │             «entity»                    │
 │              Task                       │
@@ -136,16 +136,16 @@ classDiagram
 └─────────────────────────────────────────┘
 ```
 
-| Khía Cạnh | Chi Tiết |
-|-----------|----------|
-| **Mục Đích** | Lớp cơ sở cho tất cả các thực thể domain |
-| **Phương Thức Chính** | `getProperties()` - Phản ánh trạng thái đối tượng |
-| **Mẫu Thiết Kế** | Template Method (cung cấp cơ sở, lớp con mở rộng) |
-| **Quy Trình Truy Cập** | Thuộc tính `protected` để kế thừa |
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Base class for all domain entities |
+| **Key Method** | `getProperties()` - Reflects object state |
+| **Pattern** | Template Method (provides base, children extend) |
+| **Visibility** | `protected` properties for inheritance |
 
 ---
 
-### 2. ResourceInterface (Hợp Đồng)
+### 2. ResourceInterface (Contract)
 
 ```
 ┌─────────────────────────────────────────┐
@@ -157,7 +157,7 @@ classDiagram
 │  +delete($model): bool                  │
 └─────────────────────────────────────────┘
         △
-        │ hiện thực hóa
+        │ implements
 ┌───────┴─────────────────────────────────┐
 │              Resource                   │
 ├─────────────────────────────────────────┤
@@ -172,7 +172,7 @@ classDiagram
 │  +delete($model): bool                  │
 └─────────────────────────────────────────┘
         △
-        │ kế thừa
+        │ extends
 ┌───────┴─────────────────────────────────┐
 │          TaskResource                   │
 ├─────────────────────────────────────────┤
@@ -180,16 +180,16 @@ classDiagram
 └─────────────────────────────────────────┘
 ```
 
-| Khía Cạnh | Chi Tiết |
-|-----------|----------|
-| **Mẫu Thiết Kế** | Strategy Pattern (interface định nghĩa thuật toán) |
-| **Hợp Đồng** | `_init`, `save`, `delete` |
-| **Mở Rộng** | `find`, `all` được thêm trong `Resource` cụ thể |
-| **Lợi Ích** | Lỏng lẻo, có thể kiểm thử |
+| Aspect | Details |
+|--------|---------|
+| **Pattern** | Strategy Pattern (interface defines algorithm) |
+| **Contract** | `_init`, `save`, `delete` |
+| **Extension** | `find`, `all` added in concrete `Resource` |
+| **Benefit** | Loose coupling, testability |
 
 ---
 
-### 3. Controller (Lớp Cơ Sở Trừu Tượng)
+### 3. Controller (Abstract Base)
 
 ```
 ┌─────────────────────────────────────────┐
@@ -205,7 +205,7 @@ classDiagram
 │  #secure_form($form): array             │
 └─────────────────────────────────────────┘
         △
-        │ kế thừa
+        │ extends
 ┌───────┴─────────────────────────────────┐
 │        TasksController                  │
 ├─────────────────────────────────────────┤
@@ -219,42 +219,42 @@ classDiagram
 └─────────────────────────────────────────┘
 ```
 
-| Khía Cạnh | Chi Tiết |
-|-----------|----------|
-| **Mục Đích** | Cơ sở cho tất cả các controller |
-| **Mẫu Chính** | Template Method (`render()` tự động phân giải view) |
-| **Bảo Mật** | `#secure_input` - Phòng chống XSS |
-| **Bảo Mật** | `#secure_form` | Làm sạch hàng loạt |
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Base for all controllers |
+| **Key Pattern** | Template Method (`render()` auto-resolves views) |
+| **Security** | `#secure_input` - XSS prevention |
+| **Security** | `#secure_form` - Batch sanitization |
 
 ---
 
-## So Sánh Interface vs Lớp Trừu Tượng
+## Interface vs Abstract Class Comparison
 
-| Đặc Điểm | ResourceInterface | Controller (Trừu Tượng) | Model (Trừu Tượng) |
-|-----------|-------------------|------------------------|---------------------|
-| **Loại** | Interface | Lớp Trừu Tượng | Lớp Trừu Tượng |
-| **Mục Đích** | Định nghĩa hợp đồng | Cung cấp hiện thực cơ sở | Cung cấp hiện thực cơ sở |
-| **Thuộc Tính** | Không | Có | Không |
-| **Phương Thức** | Chỉ chữ ký | Hiện thực đầy đủ | Hiện thực đầy đủ |
-| **Đa Kế Thừa** | Có thể hiện thực hóa nhiều | Chỉ kế thừa một | Chỉ kế thừa một |
-| **Sử Dụng** | Resource, TaskResource | TasksController | Task |
-
----
-
-## Tổng Hợp Mẫu Thiết Kế
-
-| Mẫu Thiết Kế | Nơi Sử Dụng | Mục Đích |
-|---------------|--------------|----------|
-| **Repository** | TaskRepository | Trừu tượng hóa truy cập dữ liệu |
-| **Active Record** | Task (qua Resource) | Ánh xạ đối tượng-quan hệ |
-| **Strategy** | ResourceInterface | Đóng gói thuật toán |
-| **Singleton** | Database | Instance kết nối duy nhất |
-| **Template Method** | Controller::render() | Thuật toán render view |
-| **Factory** | Dispatcher::loadController() | Khởi tạo lớp động |
+| Feature | ResourceInterface | Controller (Abstract) | Model (Abstract) |
+|---------|-------------------|----------------------|------------------|
+| **Type** | Interface | Abstract Class | Abstract Class |
+| **Purpose** | Define contract | Provide base impl | Provide base impl |
+| **Properties** | None | Yes | None |
+| **Methods** | Signature only | Full implementation | Full implementation |
+| **Multiple** | Can implement many | Can extend one | Can extend one |
+| **Usage** | Resource, TaskResource | TasksController | Task |
 
 ---
 
-## Chuỗi Kế Thừa
+## Design Patterns Summary
+
+| Pattern | Where Used | Purpose |
+|---------|------------|---------|
+| **Repository** | TaskRepository | Abstracts data access |
+| **Active Record** | Task (via Resource) | Object-relational mapping |
+| **Strategy** | ResourceInterface | Algorithm encapsulation |
+| **Singleton** | Database | Single connection instance |
+| **Template Method** | Controller::render() | View rendering algorithm |
+| **Factory** | Dispatcher::loadController() | Dynamic class instantiation |
+
+---
+
+## Inheritance Chain
 
 ```
 ResourceInterface
@@ -265,7 +265,7 @@ ResourceInterface
         ▼
   TaskResource
         │
-        ▼ (tạo)
+        ▼ (creates)
   TaskRepository ─────────────────────┐
                                       │
                                       ▼
@@ -283,43 +283,43 @@ Model ──► Task    Controller ──► TasksController
 
 ---
 
-## Ma Trận Quy Trình Truy Cập
+## Visibility Matrix
 
-| Lớp | Thuộc Tính | Phương Thức | Mức Truy Cập |
-|------|------------|-------------|--------------|
+| Class | Properties | Methods | Access Level |
+|-------|------------|---------|--------------|
 | **Model** | - | `getProperties()` | public |
 | **Task** | `$id, $title, $description` | `__set, __get` | protected |
 | **ResourceInterface** | - | `_init, save, delete` | public |
-| **Resource** | `$table, $id, $model` | tất cả | public |
-| **TaskResource** | (kế thừa) | `__construct` | public |
+| **Resource** | `$table, $id, $model` | all | public |
+| **TaskResource** | (inherited) | `__construct` | public |
 | **TaskRepository** | `$taskResource` | CRUD methods | protected |
 | **Controller** | `$vars, $layout` | render, set, secure | public |
 | **TasksController** | `$taskRepo` | CRUD actions | private |
 
 ---
 
-## Trách Nhiệm Lớp Trừu Tượng
+## Abstract Class Responsibilities
 
-| Lớp Trừu Tượng | Trách Nhiệm | Lớp Con |
-|-----------------|-------------|---------|
-| **Model** | Quản lý trạng thái thực thể | Task |
-| **ResourceInterface** | Hợp đồng truy cập dữ liệu | Resource |
-| **Controller** | Xử lý phản hồi HTTP | TasksController |
+| Abstract Class | Responsibility | Children |
+|----------------|----------------|----------|
+| **Model** | Entity state management | Task |
+| **ResourceInterface** | Data access contract | Resource |
+| **Controller** | HTTP response handling | TasksController |
 
 ---
 
-## Điểm Tiêm Phụ Thuộc
+## Dependency Injection Points
 
 ```
 TasksController
-    ├── TaskRepository (tiêm trong __construct)
-    │       └── TaskResource (tiêm trong __construct)
-    │               └── Task (tiêm trong __construct)
-    └── Task (tạo cho mỗi action)
+    ├── TaskRepository (injected in __construct)
+    │       └── TaskResource (injected in __construct)
+    │               └── Task (injected in __construct)
+    └── Task (created per action)
 ```
 
-| Tiêm | Phương Thức | Loại |
-|------|-------------|------|
-| TaskRepository → TaskResource | Constructor | Tạo |
-| TaskResource → Task | Constructor | Tạo |
-| TasksController → TaskRepository | Constructor | Tạo |
+| Injection | Method | Type |
+|-----------|--------|------|
+| TaskRepository → TaskResource | Constructor | Creation |
+| TaskResource → Task | Constructor | Creation |
+| TasksController → TaskRepository | Constructor | Creation |
