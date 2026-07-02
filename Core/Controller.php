@@ -16,9 +16,8 @@ class Controller
     {
         extract($this->vars);
         ob_start();
-        $viewPath = str_replace('Controller', '', get_class($this));
-        $viewPath = str_replace('MVC\s', '', $viewPath);
-        $viewPath = str_replace("\\", '', $viewPath);
+        $className = (new \ReflectionClass($this))->getShortName();
+        $viewPath = str_replace('Controller', '', $className);
         $viewPath = ROOT . '/Views/' . $viewPath . '/' . $filename . '.php';
 
         require($viewPath);
@@ -29,7 +28,7 @@ class Controller
             $content_for_layout;
         } else {
 
-            require(ROOT . "Views/Layouts/" . $this->layout . '.php');
+            require(ROOT . "/Views/Layouts/" . $this->layout . '.php');
         }
     }
 

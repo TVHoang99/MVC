@@ -7,14 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInit490e507096674804e8413fd68e852e22
 {
     public static $prefixLengthsPsr4 = array (
-        'M' => 
+        'M' =>
         array (
             'MVC\\' => 4,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'MVC\\' => 
+        'MVC\\' =>
         array (
             0 => __DIR__ . '/../..' . '/',
         ),
@@ -22,6 +22,19 @@ class ComposerStaticInit490e507096674804e8413fd68e852e22
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'MVC\\Config\\Core' => __DIR__ . '/../..' . '/Config/Core.php',
+        'MVC\\Config\\Database' => __DIR__ . '/../..' . '/Config/Database.php',
+        'MVC\\Controllers\\TasksController' => __DIR__ . '/../..' . '/Controllers/TasksController.php',
+        'MVC\\Core\\Controller' => __DIR__ . '/../..' . '/Core/Controller.php',
+        'MVC\\Core\\Model' => __DIR__ . '/../..' . '/Core/Model.php',
+        'MVC\\Core\\Resource' => __DIR__ . '/../..' . '/Core/Resource.php',
+        'MVC\\Core\\ResourceInterface' => __DIR__ . '/../..' . '/Core/ResourceInterface.php',
+        'MVC\\Dispatcher' => __DIR__ . '/../..' . '/Dispatcher.php',
+        'MVC\\Models\\Task' => __DIR__ . '/../..' . '/Models/Task.php',
+        'MVC\\Models\\TaskRepository' => __DIR__ . '/../..' . '/Models/TaskRepository.php',
+        'MVC\\Models\\TaskResource' => __DIR__ . '/../..' . '/Models/TaskResource.php',
+        'MVC\\Request' => __DIR__ . '/../..' . '/Request.php',
+        'MVC\\Router' => __DIR__ . '/../..' . '/Router.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
