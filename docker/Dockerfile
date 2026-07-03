@@ -18,6 +18,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 # Enable mod_rewrite for Apache
 RUN a2enmod rewrite
 
+# Change Apache listen port to 8080
+RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf
+
 # Copy Apache configuration file
 COPY ./docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
