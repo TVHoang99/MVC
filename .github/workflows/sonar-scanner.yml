@@ -1,0 +1,157 @@
+name: PHP 7.4 CI/CD + SonarQube
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  PHP_VERSION: "7.4"
+  COMPOSER_CACHE_DIR: ~/.composer/cache
+
+jobs:
+  test:
+    name: Test (PHP 7.4)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, zip
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Check PHP version
+        run: php -v
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+
+      - name: Prepare Laravel environment
+        if: hashFiles('artisan') != ''
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p storage/framework/cache
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          chmod -R 775 storage bootstrap/cache
+
+      - name: Run PHP syntax check
+        run: |
+          find app config routes tests -type f -name "*.php" -print0 \
+            | xargs -0 -n1 php -l
+
+      - name: Run PHPUnit with Clover coverage
+        run: |
+          mkdir -p reports
+          vendor/bin/phpunit \
+            --coverage-clover reports/clover.xml \
+            --coverage-text
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-reports
+          path: |
+            reports/
+          if-no-files-found: warn
+
+  sonar:
+    name: SonarQube Scan
+    needs: test
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download PHPUnit coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: phpunit-reports
+          path: reports
+
+      - name: Run SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  deploy:
+    name: Deploy production
+    needs:
+      - test
+      - sonar
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Deploy through SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            composer install \
+              --no-dev \
+              --prefer-dist \
+              --no-interaction \
+              --optimize-autoloader
+
+            # php artisan config:clear
+            # php artisan cache:clear
+            # php artisan config:cache
+            # php artisan route:cache
+            # php artisan view:cache
+            # php artisan migrate --force
+
+            sudo systemctl reload php7.4-fpm
+            sudo systemctl reload nginx
