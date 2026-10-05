@@ -115,7 +115,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=TVHoang99_MVC
-            -Dsonar.projectName=MVC
+            -Dsonar.projectName="PHP MVC"
             -Dsonar.sources=.
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.exclusions=vendor/**,.git/**,.github/**,docker/**
