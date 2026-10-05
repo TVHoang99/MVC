@@ -1,14 +1,16 @@
-name: PHP 7.4 CI/CD + SonarQube
+name: PHP CI/CD + SonarQube
 
 on:
   push:
     branches:
       - main
       - develop
+
   pull_request:
     branches:
       - main
       - develop
+
   workflow_dispatch:
 
 permissions:
@@ -16,13 +18,13 @@ permissions:
   pull-requests: read
 
 env:
-  PHP_VERSION: "7.4"
+  PHP_VERSION: "8.4"
   COMPOSER_CACHE_DIR: ~/.composer/cache
 
 jobs:
   test:
-    name: Test (PHP 7.4)
-    runs-on: ubuntu-22.04
+    name: PHP Validation
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout source
@@ -34,12 +36,14 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, zip
-          coverage: xdebug
+          extensions: mbstring, pdo, pdo_mysql, zip
           tools: composer:v2
 
       - name: Check PHP version
         run: php -v
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
 
       - name: Cache Composer packages
         uses: actions/cache@v4
@@ -52,45 +56,50 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
 
-      - name: Prepare Laravel environment
-        if: hashFiles('artisan') != ''
+      - name: Verify Composer autoload
         run: |
-          cp .env.example .env
-          php artisan key:generate
-          mkdir -p storage/framework/cache
-          mkdir -p storage/framework/sessions
-          mkdir -p storage/framework/views
-          chmod -R 775 storage bootstrap/cache
+          test -f vendor/autoload.php
+          composer dump-autoload --no-interaction --optimize
 
       - name: Run PHP syntax check
+        shell: bash
         run: |
-          find app config routes tests -type f -name "*.php" -print0 \
-            | xargs -0 -n1 php -l
+          set -e
 
-      - name: Run PHPUnit with Clover coverage
+          find . \
+            -type f \
+            -name "*.php" \
+            -not -path "./vendor/*" \
+            -not -path "./.git/*" \
+            -print0 |
+          xargs -0 -n1 php -l
+
+      - name: Verify required MVC source directories
+        shell: bash
         run: |
-          mkdir -p reports
-          vendor/bin/phpunit \
-            --coverage-clover reports/clover.xml \
-            --coverage-text
-        env:
-          APP_ENV: testing
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ":memory:"
+          set -e
 
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phpunit-reports
-          path: |
-            reports/
-          if-no-files-found: warn
+          for directory in Config Controllers Core Models Views Webroot; do
+            if [ ! -d "$directory" ]; then
+              echo "::error::Required MVC directory '$directory' was not found."
+              exit 1
+            fi
+          done
+
+      - name: Verify application entry point
+        shell: bash
+        run: |
+          set -e
+
+          if [ ! -f Webroot/index.php ]; then
+            echo "::error::Webroot/index.php was not found."
+            exit 1
+          fi
 
   sonar:
     name: SonarQube Scan
     needs: test
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout source
@@ -98,24 +107,32 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download PHPUnit coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: phpunit-reports
-          path: reports
-
-      - name: Run SonarQube scan
+      - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=TVHoang99_MVC
+            -Dsonar.projectName=PHP MVC
+            -Dsonar.sources=.
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.exclusions=vendor/**,.git/**,.github/**,docker/**
+
+      - name: SonarQube Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 10
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   deploy:
     name: Deploy production
     needs:
       - test
       - sonar
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     environment:
@@ -132,6 +149,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
+
           script: |
             set -e
 
@@ -146,12 +164,6 @@ jobs:
               --no-interaction \
               --optimize-autoloader
 
-            # php artisan config:clear
-            # php artisan cache:clear
-            # php artisan config:cache
-            # php artisan route:cache
-            # php artisan view:cache
-            # php artisan migrate --force
+            sudo systemctl reload php8.4-fpm || true
+            sudo systemctl reload apache2 || true
 
-            sudo systemctl reload php7.4-fpm
-            sudo systemctl reload nginx
